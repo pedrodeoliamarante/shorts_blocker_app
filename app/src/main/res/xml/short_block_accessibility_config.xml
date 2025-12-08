@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewClicked"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:notificationTimeout="100"
+    android:canRetrieveWindowContent="true"
+    android:packageNames="com.google.android.youtube,com.instagram.android"
+    android:accessibilityFlags="flagReportViewIds"
+    android:description="@string/accessibility_service_description"
+    android:settingsActivity=""
+    android:nonInteractiveUiTimeout="60000"
+    android:interactiveUiTimeout="60000" />

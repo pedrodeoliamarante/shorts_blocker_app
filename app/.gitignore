@@ -1,0 +1,21 @@
+# Gradle
+.gradle/
+build/
+
+# Android Studio
+.idea/
+*.iml
+
+# Local config
+local.properties
+
+# APKs / AABs
+*.apk
+*.aab
+
+# Logs
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
