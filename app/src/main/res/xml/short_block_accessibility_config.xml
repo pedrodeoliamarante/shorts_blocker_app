@@ -4,9 +4,7 @@
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="100"
     android:canRetrieveWindowContent="true"
-    android:packageNames="com.google.android.youtube,com.instagram.android"
     android:accessibilityFlags="flagReportViewIds"
     android:description="@string/accessibility_service_description"
-    android:settingsActivity=""
     android:nonInteractiveUiTimeout="60000"
     android:interactiveUiTimeout="60000" />

@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Package visibility for Android 11+ to interact with target apps -->
+    <queries>
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.instagram.android" />
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/shorts_blocker_icon"
@@ -19,9 +25,10 @@
         </activity>
 
         <service
-            android:name="com.example.shortsblockernative.ShortBlockAccessibilityService"
+            android:name=".ShortBlockAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true">
+            android:exported="true"
+            android:directBootAware="true">
 
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />

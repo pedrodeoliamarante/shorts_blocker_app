@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors - Shield Blue (darker variant for dark mode) -->
+    <color name="primary">#64B5F6</color>
+    <color name="primary_dark">#1976D2</color>
+    <color name="primary_light">#1E3A5F</color>
+
+    <!-- Secondary Colors - Success Green -->
+    <color name="secondary">#81C784</color>
+    <color name="secondary_dark">#4CAF50</color>
+    <color name="secondary_light">#1B4D1B</color>
+
+    <!-- Status Colors -->
+    <color name="status_active">#81C784</color>
+    <color name="status_inactive">#757575</color>
+    <color name="status_warning">#FFB74D</color>
+
+    <!-- Background Colors (dark) -->
+    <color name="background">#121212</color>
+    <color name="surface">#1E1E1E</color>
+    <color name="card_background">#2D2D2D</color>
+
+    <!-- Text Colors (light on dark) -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B3B3B3</color>
+    <color name="text_hint">#808080</color>
+    <color name="text_on_primary">#000000</color>
+
+    <!-- Platform Colors -->
+    <color name="youtube_red">#FF4444</color>
+    <color name="instagram_gradient_start">#B366D4</color>
+    <color name="instagram_gradient_end">#FF5555</color>
+</resources>

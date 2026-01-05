@@ -1,14 +1,20 @@
-package com.example.shortsblockernative
+package com.shortsblocker.app
 
 import android.accessibilityservice.AccessibilityService
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.os.SystemClock
+
 class ShortBlockAccessibilityService : AccessibilityService() {
     private var lastInstagramReelClickTime: Long = 0L
+    private var lastInstagramExploreClickTime: Long = 0L
+    private var lastBlockTime: Long = 0L
+
     companion object {
         private const val TAG = "ShortBlocker"
+        // Cooldown period to prevent double-blocking
+        private const val BLOCK_COOLDOWN_MS = 1000L
     }
 
     override fun onServiceConnected() {
@@ -32,7 +38,35 @@ class ShortBlockAccessibilityService : AccessibilityService() {
         Log.d(TAG, "Service INTERRUPTED")
     }
 
-    // ---------------- YOUTUBE LOGIC ----------------
+
+
+    /**
+     * Perform the configured block action based on user preferences.
+     * Returns true if action was performed, false if still in cooldown.
+     */
+    private fun performBlockAction(): Boolean {
+        val now = SystemClock.uptimeMillis()
+        val timeSinceLastBlock = now - lastBlockTime
+
+        // Prevent double-blocking by enforcing cooldown period
+        if (timeSinceLastBlock < BLOCK_COOLDOWN_MS) {
+            Log.d(TAG, "Block action skipped - cooldown active (${timeSinceLastBlock}ms since last block)")
+            return false
+        }
+
+        val action = AppPreferences.getBlockAction(this)
+        val globalAction = when (action) {
+            AppPreferences.BlockAction.BACK -> GLOBAL_ACTION_BACK
+            AppPreferences.BlockAction.HOME -> GLOBAL_ACTION_HOME
+            AppPreferences.BlockAction.RECENTS -> GLOBAL_ACTION_RECENTS
+        }
+        Log.d(TAG, "Performing block action: $action")
+        lastBlockTime = now
+        performGlobalAction(globalAction)
+        return true
+    }
+
+
 
     private fun handleYoutube(event: AccessibilityEvent) {
         val type = event.eventType
@@ -50,8 +84,8 @@ class ShortBlockAccessibilityService : AccessibilityService() {
         )
 
         if (isYoutubeShortsScreen(texts)) {
-            Log.d(TAG, "Detected Shorts screen — backing out")
-            performGlobalAction(GLOBAL_ACTION_BACK)
+            Log.d(TAG, "Detected Shorts screen — blocking")
+            performBlockAction()
         }
     }
 
@@ -78,7 +112,6 @@ class ShortBlockAccessibilityService : AccessibilityService() {
                 hasHandle
     }
 
-    // ---------------- INSTAGRAM LOGIC ----------------
 
 
     private fun handleInstagram(event: AccessibilityEvent) {
@@ -93,11 +126,11 @@ class ShortBlockAccessibilityService : AccessibilityService() {
             val viewId = src?.viewIdResourceName
 
             Log.d(
-                "ShortBlocker",
+                TAG,
                 "IG CLICK: class=$className viewId=$viewId text=$text desc=$desc"
             )
 
-            // 🔹 Mark clicks that likely open reels
+            // Mark clicks that likely open reels
             val clickedReelsTab =
                 viewId == "com.instagram.android:id/clips_tab" ||
                         desc?.contains("Reels", ignoreCase = true) == true
@@ -108,7 +141,26 @@ class ShortBlockAccessibilityService : AccessibilityService() {
 
             if (clickedReelsTab || clickedReelCard) {
                 lastInstagramReelClickTime = SystemClock.uptimeMillis()
-                Log.d("ShortBlocker", "IG: marked reel click at $lastInstagramReelClickTime")
+                Log.d(TAG, "IG: marked reel click at $lastInstagramReelClickTime")
+            }
+
+            // Track Explore tab and Explore item clicks
+            val clickedExploreTab =
+                viewId == "com.instagram.android:id/search_tab" ||
+                        desc?.contains("Search and explore", ignoreCase = true) == true
+
+            // Explore grid items are often ImageViews without specific IDs
+            // Track any click that happens after recently navigating to Explore
+            val now = SystemClock.uptimeMillis()
+            val recentlyOnExplore = (now - lastInstagramExploreClickTime) < 30000 // 30 second window
+
+            if (clickedExploreTab) {
+                lastInstagramExploreClickTime = now
+                Log.d(TAG, "IG: marked explore tab click at $lastInstagramExploreClickTime")
+            } else if (recentlyOnExplore && className?.contains("ImageView") == true) {
+                // Clicking an image while on Explore likely opens a reel/post
+                lastInstagramReelClickTime = now
+                Log.d(TAG, "IG: marked explore item click (ImageView) at $now")
             }
             // don't return here; the same event might also cause content change
         }
@@ -122,13 +174,16 @@ class ShortBlockAccessibilityService : AccessibilityService() {
         val texts = collectAllTexts(root)
 
         Log.d(
-            "ShortBlocker",
+            TAG,
             "IG SCREEN: type=$type class=$className sample=${texts.take(12)}"
         )
 
-        if (isInstagramReelsScreen(texts)) {
-            Log.d("ShortBlocker", "Detected Instagram Reel — backing out")
-            performGlobalAction(GLOBAL_ACTION_BACK)
+        // Pass event type and className for additional context in detection
+        // TYPE_WINDOW_STATE_CHANGED (32) indicates a new window/screen
+        val isWindowStateChange = type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        if (isInstagramReelsScreen(texts, className, isWindowStateChange)) {
+            Log.d(TAG, "Detected Instagram Reel — blocking")
+            performBlockAction()
         }
     }
 
@@ -145,10 +200,16 @@ class ShortBlockAccessibilityService : AccessibilityService() {
      * So we:
      * - Require the strong reel phrases, AND
      * - Explicitly *exclude* feed/tray context.
+     *
+     * @param texts Collected texts from the accessibility tree
+     * @param eventClass The class name of the view that triggered the event
+     * @param isWindowStateChange True if this is a TYPE_WINDOW_STATE_CHANGED event
      */
-
-
-    private fun isInstagramReelsScreen(texts: List<String>): Boolean {
+    private fun isInstagramReelsScreen(
+        texts: List<String>,
+        eventClass: String?,
+        isWindowStateChange: Boolean
+    ): Boolean {
         if (texts.isEmpty()) return false
 
         val now = SystemClock.uptimeMillis()
@@ -169,30 +230,43 @@ class ShortBlockAccessibilityService : AccessibilityService() {
 
         val looksLikeReelViewer = reelBy && (doubleTap || likeInfo || commentInfo)
 
-        // “Context” markers for tray / home feed
+        // Strong reel viewer: has multiple engagement indicators (more confident detection)
+        val strongReelViewer = reelBy && doubleTap && (likeInfo || commentInfo)
+
+        // "Context" markers for tray / home feed
         val hasTray = joinedLower.contains("reels tray container")
         val hasHome = joinedLower.contains("instagram home feed")
 
+        // Video playback UI signal - SeekBar indicates active video player
+        val isVideoPlaybackEvent = eventClass?.contains("SeekBar") == true
+
         // Block if:
-        //  - It looks like a reel viewer AND
-        //      - either it’s right after a reel-related click (Reels tab / reel tap), OR
-        //      - there is no tray/home text (pure viewer, like in your jamesgunn logs)
-        val shouldBlock =
-            looksLikeReelViewer && (recentReelClick || (!hasTray && !hasHome))
+        //  - It looks like a reel viewer AND one of:
+        //      - it's right after a reel-related click (Reels tab / reel tap), OR
+        //      - there is no tray/home text (pure viewer), OR
+        //      - we have strong reel viewer signals (reelBy + doubleTap + engagement)
+        //        This combination ONLY appears in full-screen reel viewer, never on home feed.
+        //        The home feed shows reelBy=false on fresh launch, even with reels tray.
+        //        This handles all cases: Reels tab, Explore → Reel, direct reel links.
+        val shouldBlock = looksLikeReelViewer && (
+            recentReelClick ||
+            (!hasTray && !hasHome) ||
+            strongReelViewer
+        )
 
         Log.d(
-            "ShortBlocker",
+            TAG,
             "isInstagramReelsScreen: reelBy=$reelBy doubleTap=$doubleTap " +
                     "likeInfo=$likeInfo commentInfo=$commentInfo " +
                     "hasTray=$hasTray hasHome=$hasHome " +
-                    "recentReelClick=$recentReelClick (sinceClick=$sinceClick) " +
-                    "=> $shouldBlock"
+                    "windowChange=$isWindowStateChange seekBar=$isVideoPlaybackEvent " +
+                    "strongViewer=$strongReelViewer recentClick=$recentReelClick => $shouldBlock"
         )
 
         return shouldBlock
     }
 
-    // ---------------- SHARED HELPERS ----------------
+
 
     private fun collectAllTexts(root: AccessibilityNodeInfo): List<String> {
         val out = mutableListOf<String>()

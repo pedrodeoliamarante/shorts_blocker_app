@@ -1,6 +1,44 @@
 <resources>
     <string name="app_name">ShortsBlocker</string>
+    <string name="app_tagline">Take back your time from endless scrolling</string>
+
+    <!-- Accessibility Service -->
     <string name="accessibility_service_description">
         Blocks YouTube Shorts and Instagram Reels by automatically exiting those screens.
     </string>
+
+    <!-- Status -->
+    <string name="status_active">Protection Active</string>
+    <string name="status_active_desc">Shorts and Reels are being blocked</string>
+    <string name="status_inactive">Protection Inactive</string>
+    <string name="status_inactive_desc">Enable the accessibility service to start blocking</string>
+
+    <!-- Features -->
+    <string name="what_gets_blocked">What Gets Blocked</string>
+    <string name="youtube_shorts">YouTube Shorts</string>
+    <string name="youtube_shorts_desc">Vertical short-form videos on YouTube</string>
+    <string name="instagram_reels">Instagram Reels</string>
+    <string name="instagram_reels_desc">Full-screen video reels on Instagram</string>
+    <string name="blocked">Blocked</string>
+
+    <!-- Buttons -->
+    <string name="enable_protection">Enable Protection</string>
+    <string name="open_settings">Open Accessibility Settings</string>
+
+    <!-- Hints -->
+    <string name="how_it_works_hint">Find ShortsBlocker in Accessibility settings and turn it on</string>
+    <string name="footer_text">No data collected. Runs entirely on your device.</string>
+
+    <!-- Content Descriptions -->
+    <string name="shield_icon_desc">Protection shield icon</string>
+    <string name="youtube_icon_desc">YouTube</string>
+    <string name="instagram_icon_desc">Instagram</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="block_action_title">Block Action</string>
+    <string name="block_action_desc">What to do when Shorts or Reels are detected</string>
+    <string name="action_back">Go Back (default)</string>
+    <string name="action_home">Go to Home Screen</string>
+    <string name="action_recents">Open Recent Apps</string>
 </resources>
